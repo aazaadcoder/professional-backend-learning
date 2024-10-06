@@ -19,6 +19,7 @@
     "prettier": "^3.3.3"
   },
   "dependencies": {
+    "@types/mongoose": "^5.11.96",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.0",

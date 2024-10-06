@@ -2,9 +2,11 @@ import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { use } from "react";
+
+
 const userSchema = new Schema(
   {
-    username: {
+    userName: {
       type: String,
       unique: true,
       required: true,
@@ -56,10 +58,12 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
+
+
 userSchema.pre("save", async function (next) {
   if (this.modified("password")) {
     // harbaar kuch bhi save ekarega  passworwrd baar baar incrypt hoga problem hai isiliye if??
-    this.password = bcrypt.hash(this.password, 10);
+    this.password = await bcrypt.hash(this.password, 10);
   } 
   // bcrypt what and rounds?}
   next();

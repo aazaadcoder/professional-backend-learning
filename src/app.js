@@ -12,6 +12,7 @@ app.use(cors({
 
 // to config the data that out server will recive from frontend
 app.use(express.json({limit: "16kb"}))
+
 app.use(express.urlencoded({ extended : true, limit: "16kb"}))
 // url is encoded so decode karna hota hai 
 // extended to give object inside object 

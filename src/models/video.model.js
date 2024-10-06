@@ -47,7 +47,7 @@ const videoSchema = new Schema(
   { timestamps: true }
 );
 
-videoSchema.plugin(MediaStreamAudioDestinationNode);
+videoSchema.plugin(mongooseAggregatePaginate);
 //now as added we can use this npm lib for aggregate query 
 
 

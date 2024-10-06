@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 
+const app = express()
 //app.use for middlewares and configrations
 app.use(cors({
     orgin: process.env.CORS_ORIGIN,
@@ -23,7 +24,22 @@ app.use(express.static('public'))
 app.use(cookieParser())
 // to perform CRUD on cookie of user
 
-const app = express()
+
+
+
+//routers import
+
+import userRouter from './routes/user.routes.js'
+ 
+// routes declaration 
+// app.get() not we did not import route but not now, we will use middleware 
+
+// 
+// app.use("/user", userRouter)
+app.use("/api/v1/user", userRouter)// to tell about the api version etc 
+// /user is prefix 
+
+
 
 
 export {app}

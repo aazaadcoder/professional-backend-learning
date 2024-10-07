@@ -3,8 +3,24 @@ import { ApiError } from "../utils/apiErrors.js";
 import { ApiRespone } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import { ConnectionClosedEvent } from "mongodb";
 
+const generateAccessAndRefreshToken = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSace: false });
+
+    return { accessToken, refreshToken };
+  } catch {
+    throw new ApiError(
+      500,
+      "Something went wrong while gernrating access and refresh tokens"
+    );
+  }
+};
 const registerUser = asyncHandler(async (req, res) => {
   //get user deatils from frontend
   // validation - if empty
@@ -30,16 +46,17 @@ const registerUser = asyncHandler(async (req, res) => {
   // } // but will you check for every field ??
 
   // better way
-  
+
   if (
-    [fullName, email, userName, password].some((field) => !field || field.trim() === "" )
+    [fullName, email, userName, password].some(
+      (field) => !field || field.trim() === ""
+    )
   ) {
     throw new ApiError(400, "all fields are required.");
   }
 
- 
-  console.log("all fileds fine")
-  // not giving error if userName is not passed only 
+  console.log("all fileds fine");
+  // not giving error if userName is not passed only
 
   /*now chaking if the user already exists*/
 
@@ -60,10 +77,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.files?.avatar[0]?.path;
 
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-  // TypeError: Cannot read properties of undefined (reading '0') if no cover image is passsed by user so we will use classic if else 
-  
+  // TypeError: Cannot read properties of undefined (reading '0') if no cover image is passsed by user so we will use classic if else
+
   let coverImageLocalPath;
-  if(req.files?.coverImage){
+  if (req.files?.coverImage) {
     coverImageLocalPath = req.files?.coverImage[0]?.path;
   }
   // console.log(req.files)
@@ -89,11 +106,9 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar Image is required.");
   }
 
-
   // if (!fullName || !email || !avatar?.url || !password || !userName) {
   //   throw new Error("All fields are required: fullName, email, avatar, password, userName.");
   // }
-
 
   /*  ab hame database mai dalna hai data ko and most of the time User schema hi baat akr raha hota hai db se */
 
@@ -128,4 +143,92 @@ const registerUser = asyncHandler(async (req, res) => {
   //   });
 });
 
-export { registerUser };
+const loginUser = asyncHandler(async (req, res) => {
+  const { userName, email, password } = req.body;
+
+  if (!(userName || email)) {
+    throw new ApiError(402, "Username or email required.");
+  }
+
+  // now we want ki ya to username ya email match ho jaye
+
+  const user = await User.findOne({
+    $or: [{ userName }, { email }],
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User does not exits.");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid User Credentials.");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
+
+  //think before calling db as it can be expensive doing many db calls
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  //now only server can modify these cookies , frontend can only see
+
+  return res.status(
+    (200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiRespone(
+          200,
+          {
+            user: loggedInUser,
+            accessToken,
+            refreshToken,
+          },
+          "User Logged In Successfuly."
+        )
+      )
+  );
+});
+
+//logout controller
+
+const logOutUser = asyncHandler(async (req, res) => {
+  // logout karne ke liye access token and refresh tokoen ki cookie delete karo and db mai refresh token ko empty karenege
+  // now how will we get the userid of the user jiko logout karna hai , so here we will design our own middlware
+
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set:{ 
+        refreshToken: undefined,
+      }
+    },
+    {
+      new: true,
+      // now we will updated values in reponse 
+    }
+  )
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  res
+  .status(200)
+  .clearCookie("accessToken", options)
+  .clearCookie("refreshToken", options)
+  .json(
+    new ApiRespone(200,{},"User Logged Out Successfuly.")
+  )
+});
+export { registerUser, loginUser, logOutUser };

@@ -23,6 +23,7 @@ app.use(express.static('public'))
 
 app.use(cookieParser())
 // to perform CRUD on cookie of user
+// i can access now res.cookie and req.cookie 
 
 
 

@@ -7,7 +7,7 @@ const userRouter = Router()
 
 //now we are adding multer middle ware for file upload and will use field as it accepts multiple files and we are doing the same 
 userRouter.route("/register").post(
-    upload.fields[
+    upload.fields([
         {
             name:"avatar",
             macCount :1,
@@ -16,7 +16,7 @@ userRouter.route("/register").post(
             name:"coverImage",
             macCount: 1,
         }
-    ],
+    ]),
     registerUser)
 // if user acces karta hai /users/regis ter then ye method call hoga 
 

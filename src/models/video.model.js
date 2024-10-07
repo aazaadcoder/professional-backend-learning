@@ -51,4 +51,4 @@ videoSchema.plugin(mongooseAggregatePaginate);
 //now as added we can use this npm lib for aggregate query 
 
 
-export const Video = Schema("Video", videoSchema);
+export const Video = mongoose.model("Video", videoSchema);

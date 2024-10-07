@@ -17,7 +17,9 @@ const uploadOnCloudinary = async function (loaclaFilePath) {
     });
     //file upladed succesfully
     console.log("The file has been uploaded successfuly", response.url);
-    return response.url;
+    fs.unlinkSync(loaclaFilePath);
+    
+    return response;
   } catch (error) {
     fs.unlinkSync(loaclaFilePath);
     // we have deleted the temprory file in the local/server and upload has failed and the file is currpot ad sync will help us excute the command first then move to next

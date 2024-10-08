@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser} from "../controllers/user.controller.js";
+import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage,} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -30,4 +30,22 @@ userRouter.route("/logout").post(verifyJWT, logOutUser)
 
 userRouter.route("/refresh-token").post(refreshAccessToken)
 
+userRouter.route("/profile").get(verifyJWT, getCurrentUser)
+
+userRouter.route("/profile/change-password").post(verifyJWT, changePassword)
+
+userRouter.route("/profile/update/info").post(verifyJWT,upload.none(), updateAccountDetails)
+// as we will not expect any file from from data 
+
+
+userRouter.route("/profile/update/avatar").post(
+    verifyJWT,
+    upload.single("avatar"),
+     updateUserAvatar)
+
+userRouter.route("/profile/update/cover-image").post(
+    verifyJWT,
+    upload.single("coverImage"),
+    updateUserCoverImage
+    )
 export default userRouter

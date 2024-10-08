@@ -1,14 +1,28 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { ApiError } from "./apiErrors";
-import { response } from "express";
-
+import { ApiError } from "./apiErrors.js";
+ 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const getPublicIdFromPublicUrl = function(publicUrl){
+  const urlBase = "http://res.cloudinary.com/dyhyxgztd/image/upload/"
+
+  if(!publicUrl.startsWith(urlBase)){
+    throw new ApiError(401, `Invalid Public Url: ${publicUrl}` )
+  }
+
+  let publicId = publicUrl.replace(urlBase, "")
+
+  publicId = publicId.split('/')[1];
+  
+  publicId = publicId.split('.')[0];
+
+  return publicId
+}
 const uploadOnCloudinary = async function (loaclaFilePath) {
   try {
     if (!loaclaFilePath) return null;
@@ -31,26 +45,29 @@ const uploadOnCloudinary = async function (loaclaFilePath) {
   }
 };
 
-const deleteOnColudinary = async function (publicId){
-
+const deleteOnCloudinary = async function (publicUrl){
+  
+  const publicId = getPublicIdFromPublicUrl(publicUrl)
+  //eariler i was facing issue as i firstpassed publicUrl and then i had to use string manupilation to get correct publicId as in cloudinary server
+  
   try {
-    const repsonse = await cloudinary.uploader.destroy(
+    const response = await cloudinary.uploader.destroy(
       publicId,
-      {resource_type: "auto"}
+      {resource_type: "image"}
     )
 
-    if(!repsonse){
-      throw new ApiError(500, "Unable to delete the asset of avatar on clodinary.")
+    if(response.result !== "ok"){
+      throw new ApiError(500, "Unable to delete the asset on clodinary.")
     }
     
-    console.log("The avatar image deleted successfully deleted on cloudinary.")
+    console.log("The  image deleted successfully deleted on cloudinary. Old Url: ",publicUrl)
 
     return response
   
   } catch (error) {
-    
-    return null 
+    throw error
+    // return null 
   }
 }
 
-export { uploadOnCloudinary,deleteOnColudinary };
+export { uploadOnCloudinary,deleteOnCloudinary };

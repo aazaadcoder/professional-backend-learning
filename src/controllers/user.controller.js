@@ -2,9 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiErrors.js";
 import { ApiRespone } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary, deleteOnColudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
-import { application } from "express";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -66,7 +65,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // ya to username match ho jaye ya email id
 
   const userAlreadyExists = await User.findOne({
-    $or: [({ userName }, { email })],
+    $or: [{ userName }, { email }],
   });
 
   if (userAlreadyExists) {
@@ -338,15 +337,23 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullName, email } = req.body;
+  // will use verifyJWT middleware before this 
+  const { email, fullName } = req.body;
 
-  // QA: in prodction make dirrefent controller for file update
+  // QA: in prodction make different controller for file update
 
+  
   if (!fullName || !email) {
-    throw new ApiError(400, "All  fields are required.");
+    throw new ApiError(400, "Both fullName and email are required.");
   }
 
-  const user = User.findByIdAndUpdate(
+  const isDuplicate = await User.findOne({email})
+
+  if(isDuplicate){
+    throw new ApiError(401,"User with this email already exits.")
+  }
+
+  const user = await User.findByIdAndUpdate(
     req.user?._id, 
     {
       $set: { 
@@ -373,28 +380,31 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
   // verifyJWT will provide with req.user 
   // upload middleware will return req.file(as 1 file only)
 
-  if(!req.file || req.file?.path){
+
+  if(!req.file || !req.file?.path){
     throw new ApiError(400, "Avatar Image Required.")
   }
 
-  const localAvatarPath = req.files?.path
+  const localAvatarPath = req.file?.path
 
   if(!localAvatarPath){
     throw new ApiError(400, "Avatar Local Path Missing.")
   }
 
-  // now we will upload image to cloudinary 
-  
-  // old cloudinary image ko delete karna hoga
-  deleteOnColudinary(req.user.avatar) 
+  //store cloudinary link of old avtar 
+  const oldAvatarUrl = req.user?.avatar
 
+  // now we will upload image to cloudinary 
   const avatar = await uploadOnCloudinary(localAvatarPath)
 
   if(!avatar.url){
     throw new ApiError(500,"Error uploading avatar to cloudinary.")
   }
 
-  const user = User.findByIdAndUpdate(
+  // old cloudinary image ko delete karna hoga after new image has been uploaded 
+  const repsonse = await deleteOnCloudinary(oldAvatarUrl) 
+
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
@@ -403,6 +413,9 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
     },
     {new : true}
   ).select("-password -refreshToken")
+
+
+    
 
   return res
   .status(200)
@@ -422,11 +435,11 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
   // verifyJWT will provide with req.user 
   // upload middleware will return req.file(as 1 file only)
 
-  if(!req.file || req.file?.path){
+  if(!req.file || !req.file?.path){
     throw new ApiError(400, "Cover Image Required.")
   }
 
-  const localCoverImagePath = req.files?.path
+  const localCoverImagePath = req.file?.path
 
   if(!localCoverImagePath){
     throw new ApiError(400, "Cover Image Local Path Missing.")
@@ -434,22 +447,27 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
 
   // now we will upload image to cloudinary 
   
-  // old cloudinary image ko delete karna hoga
+  let oldCoverImageUrl = ""
   if(req.user?.coverImage){
-    deleteOnColudinary(req.user?.coverImage) 
+    oldCoverImageUrl = req.user?.coverImage
   }
-
+  
   const coverImage  = await uploadOnCloudinary(localCoverImagePath)
 
   if(!coverImage.url ){
     throw new ApiError(500,"Error uploading cover Image to cloudinary.")
   }
 
-  const user = User.findByIdAndUpdate(
+  // old cloudinary image ko delete karna hoga if it exists 
+  if(oldCoverImageUrl){
+    deleteOnCloudinary(oldCoverImageUrl)
+  }
+
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-              avatar: coverImage.url,
+              coverImage: coverImage.url,
             }
     },
     {new : true}
@@ -458,7 +476,7 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
   return res
   .status(200)
   .json(
-    new ApiRespone(
+    new ApiRespone( 
       200,
       user,
       "Cover Image Updated Successfully."
@@ -475,6 +493,8 @@ export {
   logOutUser,
   refreshAccessToken,
   getCurrentUser,
+  changePassword,
   updateAccountDetails,
+  updateUserAvatar,
   updateUserCoverImage,
 };

@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 
 
+
 //if res not neede in function replace it with _
 export const verifyJWT = asyncHandler(async (req, _ ,next)=>{
 
@@ -22,7 +23,7 @@ export const verifyJWT = asyncHandler(async (req, _ ,next)=>{
         const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)// here we are verfiying the intrigity of the token stored in the cookie by checking if it was the one having the signature of the secret key and if it is not if it was modified it will be rejected by the server 
         
 
-        // findinding user in the db correspodinf to the user token if valid
+        // findinding user in the db correspodinf to the user token if valid and removing password and refresh tokoen from the return value of user 
         const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
     
         if(!user){

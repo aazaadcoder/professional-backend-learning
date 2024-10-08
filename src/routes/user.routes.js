@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { logOutUser, registerUser,loginUser , refreshAccessToken} from "../controllers/user.controller.js";
+import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -19,7 +19,7 @@ userRouter.route("/register").post(
         }
     ]),
     registerUser)
-// if user acces karta hai /users/regis ter then ye method call hoga 
+// if user acces karta hai /users/register then ye method call hoga 
 
 userRouter.route("/login").post(loginUser)
 

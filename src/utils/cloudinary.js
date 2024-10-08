@@ -1,5 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
+import { ApiError } from "./apiErrors";
+import { response } from "express";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -15,6 +17,7 @@ const uploadOnCloudinary = async function (loaclaFilePath) {
     const response = await cloudinary.uploader.upload(loaclaFilePath, {
       resource_type: "auto",
     });
+
     //file upladed succesfully
     console.log("The file has been uploaded successfuly", response.url);
     fs.unlinkSync(loaclaFilePath);
@@ -28,4 +31,26 @@ const uploadOnCloudinary = async function (loaclaFilePath) {
   }
 };
 
-export { uploadOnCloudinary };
+const deleteOnColudinary = async function (publicId){
+
+  try {
+    const repsonse = await cloudinary.uploader.destroy(
+      publicId,
+      {resource_type: "auto"}
+    )
+
+    if(!repsonse){
+      throw new ApiError(500, "Unable to delete the asset of avatar on clodinary.")
+    }
+    
+    console.log("The avatar image deleted successfully deleted on cloudinary.")
+
+    return response
+  
+  } catch (error) {
+    
+    return null 
+  }
+}
+
+export { uploadOnCloudinary,deleteOnColudinary };

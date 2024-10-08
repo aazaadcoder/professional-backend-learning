@@ -13,7 +13,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     const refreshToken = user.generateRefreshToken();
 
     user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSace: false });
+    await user.save({ validateBeforeSace: false }); //? 
 
     return { accessToken, refreshToken };
 
@@ -59,7 +59,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "all fields are required.");
   }
 
-  console.log("all fileds fine");
   // not giving error if userName is not passed only
 
   /*now chaking if the user already exists*/
@@ -212,16 +211,16 @@ const logOutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
+      $set: {                       // mongodb query to set 
         refreshToken: undefined,
       },
     },
     {
-      new: true,
-      // now we will updated values in reponse
+      new: true,                    // now we will get updated values in reponse
     }
   );
-  const options = {
+
+  const options = {               // with this only server can alter the created cookies 
     httpOnly: true,
     secure: true,
   };
@@ -234,6 +233,8 @@ const logOutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
+  
+  //accessing refresh token with the user 
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
@@ -245,7 +246,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   try {
-    const decodedToken = jwt.verify(// will throw error if token was altered and so we will use try catch to catch this error 
+
+    // checking if the the refresh token was tampered will throw error if token was altered and so we will use try catch to catch this error  
+    const decodedToken = jwt.verify(
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
@@ -263,7 +266,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh Token Expired.(as it doesnot match the refresh token in db )")
     }
   
-    // now as all verfication is done now we will genrate new tokens with new expiration time 
+    // now as all verfication is done now we will genrate new tokens with new expiration date
     
     const {accessToken, refreshToken}= await generateAccessAndRefreshToken(user?._id)
   

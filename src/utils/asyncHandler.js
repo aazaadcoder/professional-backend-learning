@@ -8,9 +8,11 @@ export { asyncHandler };
 
 
 
-const asynHandler3 = (requestHandler) =>{
-    return Promise(err, res, req, next).resolve(requestHandler(err,req,res,next)).catch((error)=>next(error))
-}
+// const asynHandler3 = (requestHandler) =>{
+//     return Promise(err, res, req, next).resolve(requestHandler(err,req,res,next)).catch((error)=>next(error))
+// }
+
+
 // const asyncHandler1 = (fn) => async (req, res, next)=>{
 //     try{
 //         await fn(req, res, next)
@@ -23,15 +25,3 @@ const asynHandler3 = (requestHandler) =>{
 //     }
 // }
 
-//practice
-
-// const asyncHandler2 = (fxn) => async (err, req, res, next) => {
-//   try {
-//     await fxn(err, res, req, next);
-//   } catch {
-//     res.res(err.code || 500).json({
-//       success: false,
-//       message: err.message,
-//     });
-//   }
-// };

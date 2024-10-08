@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 
 const app = express()
 //app.use for middlewares and configrations
+
 app.use(cors({
     orgin: process.env.CORS_ORIGIN,
     //orgins of frontend that will allow acces to server 
@@ -34,11 +35,8 @@ import userRouter from './routes/user.routes.js'
  
 // routes declaration 
 // app.get() not we did not import route but not now, we will use middleware 
-
-// 
 // app.use("/user", userRouter)
-app.use("/api/v1/user", userRouter)// to tell about the api version etc 
-// /user is prefix 
+app.use("/api/v1/user", userRouter)// to tell about the api version etc and /api/v1/user is prefix 
 
 
 

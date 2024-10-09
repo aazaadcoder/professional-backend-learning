@@ -3,15 +3,17 @@ import mongoose , {mongo, Schema} from "mongoose"
 
 const subscriptionSchema = Schema({
     
+    channel:{
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    },
+    
     subscriber:{
         type: Schema.Types.ObjectId,
         ref: "User"                                 //no need for import
     },
 
-    channel:{
-        type: Schema.Types.ObjectId,
-        ref: "User"
-    },
+    
 
 
 },{Timestamp:true}

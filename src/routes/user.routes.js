@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, uploadVideo } from "../controllers/user.controller.js";
+import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, uploadVideo, watchVideo, subscribeChannel } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -73,5 +73,8 @@ userRouter.route("/video/upload").post(
     
 )
 
+userRouter.route("/watch/:titleInput").patch(verifyJWT,watchVideo)
+
+userRouter.route("/:channelUserName/subscription-toggle").post(verifyJWT, subscribeChannel)
 
 export default userRouter

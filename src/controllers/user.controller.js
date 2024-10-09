@@ -6,7 +6,8 @@ import { Video } from "../models/video.model.js";
 import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import { Collection } from "mongo";
+import { Subscription } from "../models/subscription.model.js"; 
+
 
 // import { ObjectId } from "mongodb";
 
@@ -648,7 +649,7 @@ const  getWatchHistory = asyncHandler(async(req, res)=>{
   .json(
     new ApiRespone(
       200,
-      user[0]?.watchHistory,                    //will return an array having objects(containing data of the particular watched video)
+      user,                    //will return an array having objects(containing data of the particular watched video)
       "User watch History Fetched Successfully."
     )
   )
@@ -724,7 +725,137 @@ const uploadVideo = asyncHandler(async (req,res)=>{
 
 })
 
+const watchVideo = asyncHandler(async(req, res)=>{
+  // before this we will have verifyJWT middleware, we have req.user
 
+  const {titleInput} = req.params
+
+  if(!titleInput){
+    throw new ApiError(400, "Title is required to search video.")
+  }
+
+  //searching the video using title and incrementing the view count of the video 
+  const video = await Video.findOneAndUpdate(
+    {title: titleInput},
+    {
+      $inc:{
+        views: 1
+      }
+    },
+    {new : true}
+  )
+
+  if(!video?._id){
+    throw new ApiError(400,"Video with this title doesnot exists.")
+  }
+
+  //adding video to the history of the user watching it 
+
+  console.log("Video ID")
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $push:{
+        watchHistory : video._id
+      }
+    },
+    {new: true}
+  ).select("-password -refreshToken")
+  
+  console.log("User: " , user)
+  console.log("Video:" ,video)
+
+  if(!user){
+    throw new ApiError(500, "Error in adding video to watch history")
+  }
+
+  return res
+  .status(200)
+  .json(
+    new ApiRespone(
+      200,
+      {
+        userWatchHistory: [user?.watchHistory],
+        videoViewCount : video?.views
+
+      },
+      "Video watched succesfully and view count and watch history updated."
+
+    )
+  )
+
+  
+
+
+})
+
+const subscribeChannel = asyncHandler(async(req,res)=>{
+
+  // before this verfiyJWT so req.user 
+
+  // we will get channel usename from params
+
+  const {channelUserName} = req.params
+
+  if(!channelUserName){
+    throw new ApiError(400,"Channel name required")
+  }
+
+  console.log(channelUserName)
+  const channelUser = await User.findOne({userName:channelUserName})
+
+  if(!channelUser){
+    throw new ApiError(400,"No such channel exists.")
+  }
+
+  const isSuscribed = await Subscription.findOne(
+    {
+      $and: 
+      [
+        {channel: channelUser._id},
+        {subscriber: req.user?._id}
+      ]      
+    }
+  )
+
+  let subscription
+  let message
+
+  if(!isSuscribed){
+    subscription = await Subscription.create(
+      {
+        channel: channelUser._id,
+        subscriber: req.user?._id
+      }
+    )
+
+    message = "channel subscribed successfully."
+  }
+  else{
+    subscription = await Subscription.deleteOne({
+      $and :
+      [
+        {channel: channelUser_id},
+        {subscriber: req.user?._id}
+      ]
+    }
+  )
+    message = "channel unsubscribed successfully."
+
+  }
+
+  console.log("after action:" , subscription)
+
+  return res
+  .status(200)
+  .json(
+    new ApiRespone(
+      200,
+      subscription,
+      message
+    )
+  )
+})
 export {
   registerUser,
   loginUser,
@@ -738,5 +869,7 @@ export {
   getUserChannelProfile,
   getWatchHistory,
   uploadVideo,
+  watchVideo,
+  subscribeChannel
 
 };

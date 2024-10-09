@@ -6,6 +6,8 @@ import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
+// import { ObjectId } from "mongodb";
+
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -593,7 +595,8 @@ const  getWatchHistory = asyncHandler(async(req, res)=>{
   const user = User.aggregate([
     {
       $match:{
-        _id: new mongoose.Types.ObjectId(req.user?._id)
+        // _id:  new ObjectId(req.user?._id)
+        _id:  new mongoose.Types.ObjectId(req.user?._id)
       }
     },
     {
@@ -641,7 +644,7 @@ const  getWatchHistory = asyncHandler(async(req, res)=>{
   .json(
     new ApiRespone(
       200,
-      user[0].watchHistory,                    //will return an array having objects(containing data of the particular watched video)
+      user[0]?.watchHistory,                    //will return an array having objects(containing data of the particular watched video)
       "User watch History Fetched Successfully."
     )
   )
@@ -659,4 +662,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory,} from "../controllers/user.controller.js";
+import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, uploadVideo } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -11,11 +11,11 @@ userRouter.route("/register").post(
     upload.fields([
         {
             name:"avatar",
-            macCount :1,
+            maxCount :1,
         },
         {
             name:"coverImage",
-            macCount: 1,
+            maxCount: 1,
         }
     ]),
     registerUser)
@@ -52,5 +52,26 @@ userRouter.route("/profile/update/cover-image").patch(
 
 userRouter.route("/profile/channel/:userName").get(verifyJWT, getUserChannelProfile)
 
-userRouter.route("/history").get(verifyJWT, getWatchHistory)``
+userRouter.route("/history").get(verifyJWT, getWatchHistory)
+
+userRouter.route("/video/upload").post(
+    verifyJWT,
+    upload.fields(
+        [
+            {
+                name: "video",
+                maxCount: 1,
+            },
+            {
+                name: "thumbnail",
+                maxCount: 1,
+            }
+            
+        ]
+    ),
+    uploadVideo
+    
+)
+
+
 export default userRouter

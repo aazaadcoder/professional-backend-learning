@@ -45,7 +45,7 @@ const uploadOnCloudinary = async function (loaclaFilePath) {
   }
 };
 
-const deleteOnCloudinary = async function (publicUrl){
+const deleteOnCloudinary = async function (publicUrl, resourceTypeAsString){
   
   const publicId = getPublicIdFromPublicUrl(publicUrl)
   //eariler i was facing issue as i firstpassed publicUrl and then i had to use string manupilation to get correct publicId as in cloudinary server
@@ -53,7 +53,7 @@ const deleteOnCloudinary = async function (publicUrl){
   try {
     const response = await cloudinary.uploader.destroy(
       publicId,
-      {resource_type: "image"}
+      {resource_type: resourceTypeAsString}
     )
 
     if(response.result !== "ok"){

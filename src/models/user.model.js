@@ -59,6 +59,8 @@ const userSchema = new Schema(
 
 
 
+//hooks 
+
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     // harbaar kuch bhi save ekarega  passworwrd baar baar incrypt hoga problem hai isiliye if??

@@ -4,6 +4,7 @@ import { ApiRespone } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -566,6 +567,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
 
   ])
 
+  console.log(channel)
 
   if(!channel?.length){
     throw new ApiError(404, "Channel doesnot exists. ")
@@ -580,6 +582,70 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
       "Channel profile details fectched successfully. "
     )
   )
+})
+
+const  getWatchHistory = asyncHandler(async(req, res)=>{
+
+  // req.user?._id -> gives us string and _id is ObjectId(string) hota hai mongoose internally take karta hai iska 
+
+  // but aggeregation pipeline goes direclty so we will have to convert it to correct format 
+
+  const user = User.aggregate([
+    {
+      $match:{
+        _id: new mongoose.Types.ObjectId(req.user?._id)
+      }
+    },
+    {
+      $lookup:{
+        from: "videos",
+        localField:"watchHistory",
+        foreignField:"_id",
+        as: "watchHistory",
+
+        //now we also need data for owner of each watched video so we will use nested lookup
+        pipeline:[
+          {
+            $lookup:{
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as:"owner",
+
+              //now we need only need few projections of the owner(user) so we will use a interanl projection pipeline
+              pipeline:[{     //as this in inside it will alter the projection of owner TODO: try once by doing it outside 
+                $project:{
+                  fullName:1,
+                  userName: 1,
+                  avatar: 1,
+                },
+
+                //now this owner field will we a object inside a array so we will try to improve the data strcutre and get rid of array 
+                $addFields:{
+                  owner:{
+                    $first: "$owner",
+                    //now we will get a object with owner details inside it 
+                  }
+                }
+              }]
+            }
+          }
+        ]
+      }
+    }
+
+  ])
+
+  return res
+  .status(200)
+  .json(
+    new ApiRespone(
+      200,
+      user[0].watchHistory,                    //will return an array having objects(containing data of the particular watched video)
+      "User watch History Fetched Successfully."
+    )
+  )
+
 })
 
 export {

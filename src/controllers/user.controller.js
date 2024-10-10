@@ -217,9 +217,9 @@ const logOutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        // mongodb query to set
-        refreshToken: undefined,
+      $unset: {
+        // can also use $set 
+        refreshToken: 1,
       },
     },
     {
@@ -656,138 +656,9 @@ const  getWatchHistory = asyncHandler(async(req, res)=>{
 
 })
 
-const uploadVideo = asyncHandler(async (req,res)=>{
-
-  let videoCloundinary
-  let thumbnailCloundinary
-  try {
-    // before this we will use mullter middleware for file upload so we get file in req.files
-  
-    //get video data from user 
-    const {title, description} = req.body;
-  
-    if(!(title || description)){
-      throw new ApiError(400, "Video title and Description required.")
-    }
-  
-  
-    //now we access files from multer 
-    if(!(req.files || req.files?.video[0]?.path || req.files?.thumbnail[0]?.path)){
-      throw new ApiError(400,"Both Video and Thumbnail are required.")
-    }
-  
-    const videoLocalPath = req.files?.video[0]?.path
-    const thumbnailLocalPath = req.files?.thumbnail[0]?.path
-  
-    //now we will upload files on cloundinary
-  
-    videoCloundinary = await uploadOnCloudinary(videoLocalPath)
-    thumbnailCloundinary = await uploadOnCloudinary(thumbnailLocalPath)
-    
-    //check if video and thumbnail uploaded on cloudinary 
-  
-    if(!(videoCloundinary || thumbnailCloundinary || videoCloundinary?.url || thumbnailCloundinary?.url)){
-      throw new ApiError(500, "Error in uploading video and thumbnail on cloundinary.")
-    }
-  
-    const video = await Video.create({
-      videoFile: videoCloundinary.url,
-      thumbnail: thumbnailCloundinary.url,
-      title,
-      description,
-      owner: req.user?._id,  // as before this we will pass verifyJWT and get req.user
-      duration : videoCloundinary.duration,
-      views: 0 ,
-      isPublished: true,
-    })
-  
-    if(!video){
-      throw new ApiError(500, "Error in uploading the video data on db.")
-    }
-  
-  
-    return res
-    .status(200)
-    .json(
-      new ApiRespone(
-        200,
-        video,
-        "Video uploaded successfully on db."
-      )
-    )
-  } catch (error) {
-    console.log(error)
-
-    //not working 
-    // await deleteOnCloudinary(videoCloundinary.url, "video")
-    // await deleteOnCloudinary(thumbnailCloundinary.url, "image")
-  }
-
-})
-
-const watchVideo = asyncHandler(async(req, res)=>{
-  // before this we will have verifyJWT middleware, we have req.user
-
-  const {titleInput} = req.params
-
-  if(!titleInput){
-    throw new ApiError(400, "Title is required to search video.")
-  }
-
-  //searching the video using title and incrementing the view count of the video 
-  const video = await Video.findOneAndUpdate(
-    {title: titleInput},
-    {
-      $inc:{
-        views: 1
-      }
-    },
-    {new : true}
-  )
-
-  if(!video?._id){
-    throw new ApiError(400,"Video with this title doesnot exists.")
-  }
-
-  //adding video to the history of the user watching it 
-
-  console.log("Video ID")
-  const user = await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $push:{
-        watchHistory : video._id
-      }
-    },
-    {new: true}
-  ).select("-password -refreshToken")
-  
-  console.log("User: " , user)
-  console.log("Video:" ,video)
-
-  if(!user){
-    throw new ApiError(500, "Error in adding video to watch history")
-  }
-
-  return res
-  .status(200)
-  .json(
-    new ApiRespone(
-      200,
-      {
-        userWatchHistory: [user?.watchHistory],
-        videoViewCount : video?.views
-
-      },
-      "Video watched succesfully and view count and watch history updated."
-
-    )
-  )
-
-  
 
 
-})
+
 
 const subscribeChannel = asyncHandler(async(req,res)=>{
 
@@ -868,8 +739,6 @@ export {
   updateUserCoverImage,
   getUserChannelProfile,
   getWatchHistory,
-  uploadVideo,
-  watchVideo,
   subscribeChannel
 
 };

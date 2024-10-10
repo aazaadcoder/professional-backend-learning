@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, uploadVideo, watchVideo, subscribeChannel } from "../controllers/user.controller.js";
+import { logOutUser, registerUser,loginUser , refreshAccessToken, getCurrentUser, changePassword, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory,subscribeChannel } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -54,26 +54,9 @@ userRouter.route("/profile/channel/:userName").get(verifyJWT, getUserChannelProf
 
 userRouter.route("/history").get(verifyJWT, getWatchHistory)
 
-userRouter.route("/video/upload").post(
-    verifyJWT,
-    upload.fields(
-        [
-            {
-                name: "video",
-                maxCount: 1,
-            },
-            {
-                name: "thumbnail",
-                maxCount: 1,
-            }
-            
-        ]
-    ),
-    uploadVideo
-    
-)
 
-userRouter.route("/watch/:titleInput").patch(verifyJWT,watchVideo)
+
+
 
 userRouter.route("/:channelUserName/subscription-toggle").post(verifyJWT, subscribeChannel)
 

@@ -7,11 +7,12 @@ const subscriptionSchema = Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     },
-    
+
     subscriber:{
         type: Schema.Types.ObjectId,
         ref: "User"                                 //no need for import
     },
+    
 
     
 

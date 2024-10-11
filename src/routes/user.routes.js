@@ -58,6 +58,7 @@ userRouter.route("/history").get(verifyJWT, getWatchHistory)
 
 
 
+
 userRouter.route("/:channelUserName/subscription-toggle").post(verifyJWT, subscribeChannel)
 
 export default userRouter

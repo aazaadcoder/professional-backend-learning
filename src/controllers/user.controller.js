@@ -6,8 +6,8 @@ import { Video } from "../models/video.model.js";
 import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import { Subscription } from "../models/subscription.model.js"; 
-
+import { Subscription } from "../models/subscription.model.js";
+import { ObjectId } from "mongodb";
 
 // import { ObjectId } from "mongodb";
 
@@ -82,8 +82,8 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar Image is required.");
   }
 
-  // console.log(req.files)  returns a object with all file names as key 
-  // console.log(req.files.avatar) returns a array of length 1 with a object with all details of file 
+  // console.log(req.files)  returns a object with all file names as key
+  // console.log(req.files.avatar) returns a array of length 1 with a object with all details of file
   const avatarLocalPath = req.files?.avatar[0]?.path;
 
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
@@ -93,7 +93,7 @@ const registerUser = asyncHandler(async (req, res) => {
   if (req.files?.coverImage) {
     coverImageLocalPath = req.files?.coverImage[0]?.path;
   }
- 
+
   //check form images check for avatar
 
   if (!avatarLocalPath) {
@@ -218,7 +218,7 @@ const logOutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $unset: {
-        // can also use $set 
+        // can also use $set
         refreshToken: 1,
       },
     },
@@ -345,388 +345,349 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  // will use verifyJWT middleware before this 
+  // will use verifyJWT middleware before this
   const { email, fullName } = req.body;
 
   // QA: in prodction make different controller for file update
 
-  
   if (!fullName || !email) {
     throw new ApiError(400, "Both fullName and email are required.");
   }
 
-  const isDuplicate = await User.findOne({email})
+  const isDuplicate = await User.findOne({ email });
 
-  if(isDuplicate){
-    throw new ApiError(401,"User with this email already exits.")
+  if (isDuplicate) {
+    throw new ApiError(401, "User with this email already exits.");
   }
 
   const user = await User.findByIdAndUpdate(
-    req.user?._id, 
+    req.user?._id,
     {
-      $set: { 
-            fullName: fullName
-            , email 
-          },
+      $set: {
+        fullName: fullName,
+        email,
+      },
     },
-    {new: true}
-    ).select('-password -refreshToken')
+    { new: true }
+  ).select("-password -refreshToken");
 
-    return res
+  return res
     .status(200)
-    .json(
-      new ApiRespone(
-        200,
-        user,
-        "Account detials updated successfully."
-      )
-    )
+    .json(new ApiRespone(200, user, "Account detials updated successfully."));
 });
 
-const updateUserAvatar = asyncHandler(async(req,res)=>{
-
-  // verifyJWT will provide with req.user 
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  // verifyJWT will provide with req.user
   // upload middleware will return req.file(as 1 file only)
 
-
-  if(!req.file || !req.file?.path){
-    throw new ApiError(400, "Avatar Image Required.")
+  if (!req.file || !req.file?.path) {
+    throw new ApiError(400, "Avatar Image Required.");
   }
 
-  const localAvatarPath = req.file?.path
+  const localAvatarPath = req.file?.path;
 
-  if(!localAvatarPath){
-    throw new ApiError(400, "Avatar Local Path Missing.")
+  if (!localAvatarPath) {
+    throw new ApiError(400, "Avatar Local Path Missing.");
   }
 
-  //store cloudinary link of old avtar 
-  const oldAvatarUrl = req.user?.avatar
+  //store cloudinary link of old avtar
+  const oldAvatarUrl = req.user?.avatar;
 
-  // now we will upload image to cloudinary 
-  const avatar = await uploadOnCloudinary(localAvatarPath)
+  // now we will upload image to cloudinary
+  const avatar = await uploadOnCloudinary(localAvatarPath);
 
-  if(!avatar.url){
-    throw new ApiError(500,"Error uploading avatar to cloudinary.")
+  if (!avatar.url) {
+    throw new ApiError(500, "Error uploading avatar to cloudinary.");
   }
 
-  // old cloudinary image ko delete karna hoga after new image has been uploaded 
-  const repsonse = await deleteOnCloudinary(oldAvatarUrl, "image") 
+  // old cloudinary image ko delete karna hoga after new image has been uploaded
+  const repsonse = await deleteOnCloudinary(oldAvatarUrl, "image");
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-              avatar: avatar.url,
-            }
+        avatar: avatar.url,
+      },
     },
-    {new : true}
-  ).select("-password -refreshToken")
-
-
-    
+    { new: true }
+  ).select("-password -refreshToken");
 
   return res
-  .status(200)
-  .json(
-    new ApiRespone(
-      200,
-      user,
-      "Avatar Image Updated Successfully."
-    )
-  )
+    .status(200)
+    .json(new ApiRespone(200, user, "Avatar Image Updated Successfully."));
+});
 
-}) 
-
-
-const updateUserCoverImage = asyncHandler(async(req,res)=>{
-
-  // verifyJWT will provide with req.user 
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  // verifyJWT will provide with req.user
   // upload middleware will return req.file(as 1 file only)
 
-  if(!req.file || !req.file?.path){
-    throw new ApiError(400, "Cover Image Required.")
+  if (!req.file || !req.file?.path) {
+    throw new ApiError(400, "Cover Image Required.");
   }
 
-  const localCoverImagePath = req.file?.path
+  const localCoverImagePath = req.file?.path;
 
-  if(!localCoverImagePath){
-    throw new ApiError(400, "Cover Image Local Path Missing.")
+  if (!localCoverImagePath) {
+    throw new ApiError(400, "Cover Image Local Path Missing.");
   }
 
-  // now we will upload image to cloudinary 
-  
-  let oldCoverImageUrl = ""
-  if(req.user?.coverImage){
-    oldCoverImageUrl = req.user?.coverImage
-  }
-  
-  const coverImage  = await uploadOnCloudinary(localCoverImagePath)
+  // now we will upload image to cloudinary
 
-  if(!coverImage.url ){
-    throw new ApiError(500,"Error uploading cover Image to cloudinary.")
+  let oldCoverImageUrl = "";
+  if (req.user?.coverImage) {
+    oldCoverImageUrl = req.user?.coverImage;
   }
 
-  // old cloudinary image ko delete karna hoga if it exists 
-  if(oldCoverImageUrl){
-    deleteOnCloudinary(oldCoverImageUrl, "image")
+  const coverImage = await uploadOnCloudinary(localCoverImagePath);
+
+  if (!coverImage.url) {
+    throw new ApiError(500, "Error uploading cover Image to cloudinary.");
+  }
+
+  // old cloudinary image ko delete karna hoga if it exists
+  if (oldCoverImageUrl) {
+    deleteOnCloudinary(oldCoverImageUrl, "image");
   }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-              coverImage: coverImage.url,
-            }
+        coverImage: coverImage.url,
+      },
     },
-    {new : true}
-  ).select("-password -refreshToken")
+    { new: true }
+  ).select("-password -refreshToken");
 
   return res
-  .status(200)
-  .json(
-    new ApiRespone( 
-      200,
-      user,
-      "Cover Image Updated Successfully."
-    )
-  )
+    .status(200)
+    .json(new ApiRespone(200, user, "Cover Image Updated Successfully."));
+});
 
-}) 
-
-const getUserChannelProfile = asyncHandler(async(req,res)=>{
-
-  //now we will access username of the channel from the ulr i.e. the params 
-  const {userName} = req.params
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  //now we will access username of the channel from the ulr i.e. the params
+  const { userName } = req.params;
 
   // check if username was passed in params
 
-  if(!userName?.trim()){
-    throw new ApiError(400,"Username required.")
+  if (!userName?.trim()) {
+    throw new ApiError(400, "Username required.");
   }
 
-  // //check if channel with the usernae exist 
+  // //check if channel with the usernae exist
   // const channelExists = await User.findOne({userName})
 
   // if(!channelExists){
   //   throw new ApiError(400, "The channel with this username doesnot exists.")
   // }
 
-  // we can do above code directly using aggregation pipeline no need for multiple db calls 
+  // we can do above code directly using aggregation pipeline no need for multiple db calls
 
-   const channel = await User.aggregate([         // will return a array 
+  const channel = await User.aggregate([
+    // will return a array
     {
-      $match:{                                    //stage 1 
-        userName : userName?.toLowerCase()
-      }
+      $match: {
+        //stage 1
+        userName: userName?.toLowerCase(),
+      },
     },
     {
-      $lookup:{                                   //stage 2 
-        from : "subscriptions", // "Subscription" -> "subscriptions" in mongoDB
+      $lookup: {
+        //stage 2
+        from: "subscriptions", // "Subscription" -> "subscriptions" in mongoDB
         localField: "_id",
         foreignField: "channel",
-        as: "suscribers"
-      }
+        as: "suscribers",
+      },
     },
     {
-      $lookup:{                 // to get list of channel suscribed 
+      $lookup: {
+        // to get list of channel suscribed
         from: "subscriptions",
         localField: "_id",
         foreignField: "subscriber",
-        as:"suscribedTo"
-      }
+        as: "suscribedTo",
+      },
     },
     {
-      //now we will add two fields of count of suscribers and suscribed to 
-      
-      $addFields:{
-        subscriberCount:{
-          $size: "$suscribers" // count # of doc in suscribers output 
+      //now we will add two fields of count of suscribers and suscribed to
+
+      $addFields: {
+        subscriberCount: {
+          $size: "$suscribers", // count # of doc in suscribers output
         },
         subscribedToCount: {
-          $size: "$suscribedTo"
+          $size: "$suscribedTo",
         },
-        isSuscribed:{
-          $cond:{
-            //finding if the user seeing the channel has his name in the susbcribe field in subscrbers doc 
-            if : {$in: [req.user?._id, "$suscribers.subscriber"]} ,
-            // in can work with array and object 
+        isSuscribed: {
+          $cond: {
+            //finding if the user seeing the channel has his name in the susbcribe field in subscrbers doc
+            if: { $in: [req.user?._id, "$suscribers.subscriber"] },
+            // in can work with array and object
 
             then: true,
-            else: false 
-          }
-        }
-      } 
+            else: false,
+          },
+        },
+      },
     },
     {
-      // now we will project only selected fields that are needed as network traffic will increase 
-      $project:{
+      // now we will project only selected fields that are needed as network traffic will increase
+      $project: {
         fullName: 1,
         userName: 1,
-        subscriberCount : 1,
-        subscribedToCount :1,
-        isSuscribed : 1,
-        avatar: 1 ,
+        subscriberCount: 1,
+        subscribedToCount: 1,
+        isSuscribed: 1,
+        avatar: 1,
         coverImage: 1,
-        email: 1
-      }
+        email: 1,
+      },
+    },
+  ]);
 
-    }
+  console.log(channel);
 
-  ])
-
-  console.log(channel)
-
-  if(!channel?.length){
-    throw new ApiError(404, "Channel doesnot exists. ")
+  if (!channel?.length) {
+    throw new ApiError(404, "Channel doesnot exists. ");
   }
 
   return res
-  .status(200)
-  .json(
-    new ApiRespone(
-      200,
-      channel[0],
-      "Channel profile details fectched successfully. "
-    )
-  )
-})
+    .status(200)
+    .json(
+      new ApiRespone(
+        200,
+        channel[0],
+        "Channel profile details fectched successfully. "
+      )
+    );
+});
 
-const  getWatchHistory = asyncHandler(async(req, res)=>{
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // req.user?._id -> gives us string and _id is ObjectId(string) hota hai mongoose internally take karta hai iska
 
-  // req.user?._id -> gives us string and _id is ObjectId(string) hota hai mongoose internally take karta hai iska 
+  // but aggeregation pipeline goes direclty so we will have to convert it to correct format
 
-  // but aggeregation pipeline goes direclty so we will have to convert it to correct format 
-
-  const user = User.aggregate([
+  const user = await User.aggregate([
     {
-      $match:{
+      $match: {
         // _id:  new ObjectId(req.user?._id)
-        _id:  new mongoose.Types.ObjectId(req.user?._id)
-      }
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
     },
     {
-      $lookup:{
+      $lookup: {
         from: "videos",
-        localField:"watchHistory",
-        foreignField:"_id",
+        localField: "watchHistory",
+        foreignField: "_id",
         as: "watchHistory",
 
         //now we also need data for owner of each watched video so we will use nested lookup
-        pipeline:[
+        pipeline: [
           {
-            $lookup:{
+            $lookup: {
               from: "users",
               localField: "owner",
               foreignField: "_id",
-              as:"owner",
+              as: "owner",
 
               //now we need only need few projections of the owner(user) so we will use a interanl projection pipeline
-              pipeline:[{     //as this in inside it will alter the projection of owner TODO: try once by doing it outside 
-                $project:{
-                  fullName:1,
-                  userName: 1,
-                  avatar: 1,
+              pipeline: [
+                {
+                  //as this in inside it will alter the projection of owner TODO: try once by doing it outside
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
                 },
+                
+              ],
+            },
+            
+          },
+          //now this owner field will we a object inside a array so we will try to improve the data strcutre and get rid of array
+          {
+            $addFields: {
+              owner: {
+                $arrayElemAt : ["$owner", 0],
+                //now we will get a object with owner details inside it
+              },
+            },
+          },
+          {
+            $project:{
+              thumbnail:1,
+              owner: 1,
+              title: 1, 
+              views: 1, 
 
-                //now this owner field will we a object inside a array so we will try to improve the data strcutre and get rid of array 
-                $addFields:{
-                  owner:{
-                    $first: "$owner",
-                    //now we will get a object with owner details inside it 
-                  }
-                }
-              }]
             }
           }
-        ]
+        ],
+      },
+    },
+    {
+      $project:{
+        watchHistory : 1, 
+
       }
     }
+  ]);
 
-  ])
-
-  return res
-  .status(200)
-  .json(
+  return res.status(200).json(
     new ApiRespone(
       200,
-      user,                    //will return an array having objects(containing data of the particular watched video)
+      user, //will return an array having objects(containing data of the particular watched video)
       "User watch History Fetched Successfully."
     )
-  )
+  );
+});
 
-})
-
-
-
-
-
-const subscribeChannel = asyncHandler(async(req,res)=>{
-
-  // before this verfiyJWT so req.user 
+const subscribeChannel = asyncHandler(async (req, res) => {
+  // before this verfiyJWT so req.user
 
   // we will get channel usename from params
 
-  const {channelUserName} = req.params
+  const { channelUserName } = req.params;
 
-  if(!channelUserName){
-    throw new ApiError(400,"Channel name required")
+  if (!channelUserName) {
+    throw new ApiError(400, "Channel name required");
   }
 
-  console.log(channelUserName)
-  const channelUser = await User.findOne({userName:channelUserName})
+  console.log(channelUserName);
+  const channelUser = await User.findOne({ userName: channelUserName });
 
-  if(!channelUser){
-    throw new ApiError(400,"No such channel exists.")
+  if (!channelUser) {
+    throw new ApiError(400, "No such channel exists.");
   }
 
-  const isSuscribed = await Subscription.findOne(
-    {
-      $and: 
-      [
-        {channel: channelUser._id},
-        {subscriber: req.user?._id}
-      ]      
-    }
-  )
+  const isSuscribed = await Subscription.findOne({
+    $and: [{ channel: channelUser._id }, { subscriber: req.user?._id }],
+  });
 
-  let subscription
-  let message
+  let subscription;
+  let message;
 
-  if(!isSuscribed){
-    subscription = await Subscription.create(
-      {
-        channel: channelUser._id,
-        subscriber: req.user?._id
-      }
-    )
+  if (!isSuscribed) {
+    subscription = await Subscription.create({
+      channel: channelUser._id,
+      subscriber: req.user?._id,
+    });
 
-    message = "channel subscribed successfully."
-  }
-  else{
+    message = "channel subscribed successfully.";
+  } else {
     subscription = await Subscription.deleteOne({
-      $and :
-      [
-        {channel: channelUser_id},
-        {subscriber: req.user?._id}
-      ]
-    }
-  )
-    message = "channel unsubscribed successfully."
-
+      $and: [{ channel: channelUser_id }, { subscriber: req.user?._id }],
+    });
+    message = "channel unsubscribed successfully.";
   }
 
-  console.log("after action:" , subscription)
+  console.log("after action:", subscription);
 
-  return res
-  .status(200)
-  .json(
-    new ApiRespone(
-      200,
-      subscription,
-      message
-    )
-  )
-})
+  return res.status(200).json(new ApiRespone(200, subscription, message));
+});
 export {
   registerUser,
   loginUser,
@@ -739,6 +700,5 @@ export {
   updateUserCoverImage,
   getUserChannelProfile,
   getWatchHistory,
-  subscribeChannel
-
+  subscribeChannel,
 };

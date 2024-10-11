@@ -33,6 +33,8 @@ app.use(cookieParser())
 
 import userRouter from './routes/user.routes.js'
 import videoRouter from './routes/video.routes.js'
+import likeRouter from './routes/like.routes.js'
+import commentRoute from './routes/comment.routes.js'
  
 // routes declaration 
 // app.get() not we did not import route but not now, we will use middleware 
@@ -40,6 +42,10 @@ import videoRouter from './routes/video.routes.js'
 app.use("/api/v1/user", userRouter)// to tell about the api version etc and /api/v1/user is prefix 
 
 app.use("/api/v1/video", videoRouter)
+
+app.use("/api/v1/like",likeRouter)
+
+app.use("/api/v1/comment/")
 
 
 

@@ -1,9 +1,9 @@
-import { Route } from "express";
+// import { Route } from "express";
 
 
 
-const commentRoute = Route()
+// const commentRoute = Route()
 
 
 
-export default commentRoute
+// export default commentRoute

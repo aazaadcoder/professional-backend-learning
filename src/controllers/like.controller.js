@@ -51,6 +51,13 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
+
+  const {page = 1 , pageSize = 2} = req.query
+
+  if(page <1 || pageSize <1){
+    throw new ApiError(400, "Require page and pageSize query greater than 0 ")
+  }
+
   console.log(new ObjectId(req.user._id));
 //   const likeData2 = await Like.aggregate([
 //     {
@@ -178,13 +185,33 @@ const getLikedVideos = asyncHandler(async (req, res) => {
             video:1,
             createdAt: 1,   
         }
+    },
+    {
+      $facet:{
+        metaData: [{$count : "totalCount"}],
+        data: [{$skip : (page-1)*pageSize} , {$limit : pageSize}]
+      }
+    },
+    {
+      $addFields:{
+        metaData: {
+          $arrayElemAt: ["$metaData",0]
+        }
+      }
     }
   ])
   console.log(likeData);
 
   return res
     .status(200)
-    .json(new ApiRespone(200, likeData, "Liked videos fetched successfully."));
+    .json(new ApiRespone(
+      200, 
+      {
+        "metadata": likeData[0].metaData,
+        "likeData": likeData[0].data
+      }
+      , 
+      "Liked videos fetched successfully."));
 });
 
 export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };

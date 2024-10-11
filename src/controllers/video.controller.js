@@ -1,6 +1,6 @@
 import { deleteOnCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { Video} from "../models/video.model.js";
+import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/apiErrors.js";
 import { ApiRespone } from "../utils/apiResponse.js";
@@ -10,17 +10,15 @@ import { app } from "../app.js";
 import { ObjectId } from "mongodb";
 import error from "mongoose/lib/error/index.js";
 
-const isVideoOwner = async function(videoId, userId){
+const isVideoOwner = async function (videoId, userId) {
+  const video = await Video.findById(videoId);
 
-    const video = await Video.findById(videoId)
-    
-    if(video.owner.equals(userId)){
-        return true
-    }
-    else{
-        return false
-    }
-}
+  if (video.owner.equals(userId)) {
+    return true;
+  } else {
+    return false;
+  }
+};
 const publishAVideo = asyncHandler(async (req, res) => {
   // before this we will use mullter middleware for file upload so we get file in req.files
 
@@ -94,262 +92,294 @@ const publishAVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
-})
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "createdAt",
+    sortType = -1,
+    userId = req.user._id
+  } = req.query;
+
+  //verify jwt before this
+
+  const sortOptions = {};
+  const sortDirection = Number(sortType);
+  sortOptions[sortBy] = sortDirection;
+
+
+  const videoData = await Video.aggregate([
+    {
+      $match: { owner: new ObjectId(userId ), isPublished: true },
+    },
+    {
+      $project: {
+        thumbnail: 1,
+        title: 1,
+        description: 1,
+        duration: 1,
+        views: 1,
+        isPublished: 1,
+        createdAt: 1,
+      },
+    },
+    {
+      $sort: sortOptions,
+    },
+    {
+      $facet: {
+        metaData: [
+          { $count: "totalCount" },
+          {
+            $addFields: {
+              page: page,
+              pageLimit: limit,
+              sortBy: sortBy,
+              sortType: sortType,
+            },
+          },
+        ],
+        data: [
+          { $skip: (Number(page) - 1) * Number(limit) },
+          { $limit: Number(limit) },
+        ],
+      },
+    },
+  ]);
+
+  if (!videoData) {
+    throw new ApiError(500, "Error accessing video data.");
+  }
+
+  return res.status(200).json(
+    new ApiRespone(200, {
+      metaData: videoData[0]?.metaData,
+      videoData: videoData[0]?.data,
+    })
+  );
+});
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    // before this we will have verifyJWT middleware, we have req.user
-  
-    console.log(videoId)
+  const { videoId } = req.params;
+  // before this we will have verifyJWT middleware, we have req.user
 
-    if(!videoId){
-      throw new ApiError(400, "Video Id is required to search video.")
-    }
-  
-    //searching the video using title and incrementing the view count of the video 
-    const video = await Video.findByIdAndUpdate(
-      videoId,
-      {
-        $inc:{
-          views: 1
-        }
+  console.log(videoId);
+
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is required to search video.");
+  }
+
+  //searching the video using title and incrementing the view count of the video
+  const video = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $inc: {
+        views: 1,
       },
-      {new : true}
-    )
-    
-    if(!video?._id){
-      throw new ApiError(400,"Video with this Video Id doesnot exists.")
-    }
-  
-    //adding video to the history of the user watching it 
-  
-    
-    console.log("Video ID")
-    const user = await User.findByIdAndUpdate(
-      req.user?._id,
-      {
-        $push:{
-          watchHistory : video._id
-        }
+    },
+    { new: true }
+  );
+
+  if (!video?._id) {
+    throw new ApiError(400, "Video with this Video Id doesnot exists.");
+  }
+
+  //adding video to the history of the user watching it
+
+  console.log("Video ID");
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $push: {
+        watchHistory: video._id,
       },
-      {new: true}
-    ).select("-password -refreshToken")
-    
-    console.log("User: " , user)
-    console.log("Video:" , video)
-  
-    if(!user){
-      throw new ApiError(500, "Error in adding video to watch history")
-    }
-  
-    return res
-    .status(200)
-    .json(
-      new ApiRespone(
-        200,
-        {
-          userWatchHistory: [user?.watchHistory],
-          videoViewCount : video?.views
-  
-        },
-        "Video watched succesfully and view count and watch history updated."
-  
-      )
-    )
-})
-const getVideoByTitle = asyncHandler(async(req, res)=>{
-    // before this we will have verifyJWT middleware, we have req.user
-  
-    const {titleInput} = req.params
-  
-    if(!titleInput){
-      throw new ApiError(400, "Title is required to search video.")
-    }
-  
-    //searching the video using title and incrementing the view count of the video 
-    const video = await Video.findOneAndUpdate(
-      {title: titleInput},
+    },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  console.log("User: ", user);
+  console.log("Video:", video);
+
+  if (!user) {
+    throw new ApiError(500, "Error in adding video to watch history");
+  }
+
+  return res.status(200).json(
+    new ApiRespone(
+      200,
       {
-        $inc:{
-          views: 1
-        }
+        userWatchHistory: [user?.watchHistory],
+        videoViewCount: video?.views,
       },
-      {new : true}
+      "Video watched succesfully and view count and watch history updated."
     )
-  
-    if(!video?._id){
-      throw new ApiError(400,"Video with this title doesnot exists.")
-    }
-  
-    //adding video to the history of the user watching it 
-  
-    
-    console.log("Video ID")
-    const user = await User.findByIdAndUpdate(
-      req.user?._id,
+  );
+});
+const getVideoByTitle = asyncHandler(async (req, res) => {
+  // before this we will have verifyJWT middleware, we have req.user
+
+  const { titleInput } = req.params;
+
+  if (!titleInput) {
+    throw new ApiError(400, "Title is required to search video.");
+  }
+
+  //searching the video using title and incrementing the view count of the video
+  const video = await Video.findOneAndUpdate(
+    { title: titleInput },
+    {
+      $inc: {
+        views: 1,
+      },
+    },
+    { new: true }
+  );
+
+  if (!video?._id) {
+    throw new ApiError(400, "Video with this title doesnot exists.");
+  }
+
+  //adding video to the history of the user watching it
+
+  console.log("Video ID");
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $push: {
+        watchHistory: video._id,
+      },
+    },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  console.log("User: ", user);
+  console.log("Video:", video);
+
+  if (!user) {
+    throw new ApiError(500, "Error in adding video to watch history");
+  }
+
+  return res.status(200).json(
+    new ApiRespone(
+      200,
       {
-        $push:{
-          watchHistory : video._id
-        }
+        userWatchHistory: [user?.watchHistory],
+        videoViewCount: video?.views,
       },
-      {new: true}
-    ).select("-password -refreshToken")
-    
-    console.log("User: " , user)
-    console.log("Video:" , video)
-  
-    if(!user){
-      throw new ApiError(500, "Error in adding video to watch history")
-    }
-  
-    return res
-    .status(200)
-    .json(
-      new ApiRespone(
-        200,
-        {
-          userWatchHistory: [user?.watchHistory],
-          videoViewCount : video?.views
-  
-        },
-        "Video watched succesfully and view count and watch history updated."
-      )
+      "Video watched succesfully and view count and watch history updated."
     )
-  })
+  );
+});
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-     
-    const {newTitle, newDecription} = req.body
+  const { videoId } = req.params;
 
-     
-    if(!videoId){
-        throw new ApiError(400,"Video Id required.")
-    }
+  const { newTitle, newDecription } = req.body;
 
-    if(!(newTitle || newDecription)){
-        throw new ApiError(401,"Title or description required.")
-    }
+  if (!videoId) {
+    throw new ApiError(400, "Video Id required.");
+  }
 
-    const video = await Video.findById(videoId)
-    
-    if(!(isVideoOwner(videoId,req.user?._id ))){
-        throw new ApiError(400, "You are not the owner.")
-    }
+  if (!(newTitle || newDecription)) {
+    throw new ApiError(401, "Title or description required.");
+  }
 
-    const updatedVideo = await Video.findByIdAndUpdate(
-        videoId,
-        {
-            $set: {
-                title : newTitle,
-                description : newDecription,
-            }
-        },
-        {new: true}
-    )
+  const video = await Video.findById(videoId);
 
-    if(!updatedVideo){
-        throw new ApiError(500,"Error in updating the video.")
-    }
+  if (!isVideoOwner(videoId, req.user?._id)) {
+    throw new ApiError(400, "You are not the owner.");
+  }
 
-    return res
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title: newTitle,
+        description: newDecription,
+      },
+    },
+    { new: true }
+  );
+
+  if (!updatedVideo) {
+    throw new ApiError(500, "Error in updating the video.");
+  }
+
+  return res
     .status(200)
     .json(
-        new ApiRespone(
-            200,
-            updatedVideo,
-            "Video info updated successfully."
-        )
-    )
-
-
-    
-
-})
+      new ApiRespone(200, updatedVideo, "Video info updated successfully.")
+    );
+});
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    
- 
-    if(!videoId){
-        throw new ApiError(400, "video id required")
-    }
-    
-    if(!isVideoOwner(videoId, req.user._id)){
-        throw new ApiError(402, "You are not authotirzed to delete this video.")
-    }
+  const { videoId } = req.params;
 
-    const video = await Video.findByIdAndDelete(videoId)
+  if (!videoId) {
+    throw new ApiError(400, "video id required");
+  }
 
-    if(!video){
-        throw new ApiError(500, "Error in deleting the video in db.")
-    }
+  if (!isVideoOwner(videoId, req.user._id)) {
+    throw new ApiError(402, "You are not authotirzed to delete this video.");
+  }
 
-    console.log(video)
+  const video = await Video.findByIdAndDelete(videoId);
 
-    return res
+  if (!video) {
+    throw new ApiError(500, "Error in deleting the video in db.");
+  }
+
+  console.log(video);
+
+  return res
     .status(200)
-    .json(
-        new ApiRespone(
-            200, 
-            video,
-            "video deleted Successfully."
-        )
-    )
-
-})
+    .json(new ApiRespone(200, video, "video deleted Successfully."));
+});
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+  const { videoId } = req.params;
 
-    if(!videoId){
-        throw new ApiError(400,"Video id is required")
-    }
+  if (!videoId) {
+    throw new ApiError(400, "Video id is required");
+  }
 
-    if(!isVideoOwner(videoId, req.user._id)){
-        throw new ApiError(401, "You are not athorized to toggle publish status.")
-    }
+  if (!isVideoOwner(videoId, req.user._id)) {
+    throw new ApiError(401, "You are not athorized to toggle publish status.");
+  }
 
-    const video = await Video.findById(videoId)
-    if(!video){
-        throw new error(400,"Video does not exists")
-    }
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new error(400, "Video does not exists");
+  }
 
-    const publicStatus = video.isPublished == true ? false : true;
+  const publicStatus = video.isPublished == true ? false : true;
 
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        isPublished: publicStatus,
+      },
+    },
+    { new: true }
+  );
 
-    const updatedVideo = await Video.findByIdAndUpdate(
-        videoId,
-        {
-            $set:{
-                isPublished: publicStatus
-        }},
-        {new : true}
-    )
+  console.log(updatedVideo);
+  if (!video) {
+    throw new ApiError(500, "Error updating the publish statuts.");
+  }
 
-    console.log(updatedVideo)
-    if(!video){
-        throw new ApiError(500,"Error updating the publish statuts.")
-    }
-
-    return res
+  return res
     .status(200)
     .json(
-        new ApiRespone(
-            200,
-            updatedVideo,
-            "Video publish changed successfully."
-        )
-    )
-})
+      new ApiRespone(200, updatedVideo, "Video publish changed successfully.")
+    );
+});
 
 export {
-    getAllVideos,
-    publishAVideo,
-    getVideoById,
-    updateVideo,
-    deleteVideo,
-    togglePublishStatus,
-    getVideoByTitle
-}
+  getAllVideos,
+  publishAVideo,
+  getVideoById,
+  updateVideo,
+  deleteVideo,
+  togglePublishStatus,
+  getVideoByTitle,
+};

@@ -97,9 +97,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
     limit = 10,
     sortBy = "createdAt",
     sortType = -1,
-    userId = req.user._id
+    
   } = req.query;
 
+  const {userId = req.user._id} = req.params
   //verify jwt before this
 
   const sortOptions = {};

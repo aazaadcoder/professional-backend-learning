@@ -43,7 +43,7 @@ videoRouter.route("/delete/:videoId").post(verifyJWT,upload.none(),deleteVideo )
 
 videoRouter.route("/update/publish-status/:videoId").patch(verifyJWT, upload.none(), togglePublishStatus)
 
-videoRouter.route("/all-videos").get(verifyJWT, getAllVideos)
+videoRouter.route("/all-videos/:userId").get(verifyJWT, getAllVideos)
 
 export default videoRouter
 

@@ -1,6 +1,5 @@
 import mongoose , {Schema} from "mongoose";
-import string from "mongoose/lib/cast/string";
-import schema from "mongoose/lib/schema";
+ 
 
 
 const tweetSchema = new Schema(
@@ -12,7 +11,7 @@ const tweetSchema = new Schema(
         content:{
             type: String,
             required: true
-        }
+        }   
     },
     {timestamps: true}
 )

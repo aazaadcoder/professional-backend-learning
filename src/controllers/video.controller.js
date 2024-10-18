@@ -163,8 +163,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   // before this we will have verifyJWT middleware, we have req.user
 
-  console.log(videoId);
-
+ 
   if (!videoId) {
     throw new ApiError(400, "Video Id is required to search video.");
   }

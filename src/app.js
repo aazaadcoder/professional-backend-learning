@@ -36,7 +36,7 @@ import videoRouter from './routes/video.routes.js'
 import likeRouter from './routes/like.routes.js'
 import commentRoute from './routes/comment.routes.js'
 import tweetRouter from './routes/tweet.routes.js'
-
+import playlistRouter from './routes/playlist.routes.js'
  
 // routes declaration 
 // app.get() not we did not import route but not now, we will use middleware 
@@ -51,6 +51,7 @@ app.use("/api/v1/comment",commentRoute)
 
 app.use("/api/v1/tweet", tweetRouter)
 
+app.use("/api/v1/playlist", playlistRouter)
 
 
 
